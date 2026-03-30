@@ -1,0 +1,27 @@
+{% extends 'main.html' %}
+
+{% block content %}
+
+<div class="title-container">
+    <h1>Welcome to NIDS AI</h1>
+</div>
+
+<form class="login-register-wrapper" action="" method="POST">
+    {% csrf_token %}
+    <div class="fields-wrapper">
+        {% for field in form %}
+            <div class="register-fields">
+                {{ field.label_tag }}
+                {{ field }}
+            </div>
+        {% endfor %}
+        <div class="link-wrapper">
+            <input type="submit" value="register" />
+            Already have an account?
+            <a href="{% url 'login' %}">Login</a>
+        </div>
+    </div>
+</form>
+
+
+{% endblock %}

@@ -1,0 +1,207 @@
+{% extends 'main.html' %}
+
+{% load static %}
+
+{% block content %}
+<div class="title-container">
+    <h1>Welcome to NIDS AI</h1>
+    <a class="btn_logout" href="{% url 'logout' %}">logout</a>
+</div>
+
+<div id="chat-messages">
+    {% for message in messages %}
+        {% if message.role == 'Model' %}
+        <div class="modelMessage" data-raw="{{ message.context }}">
+            <div class="msgContent">
+                 {{ message.context }}
+            </div>
+            <button type="button" class="reference"><span class="material-symbols-outlined">undo</span></button>
+        </div>
+        {% else %}
+        <div class="userMessage" style="font-size: 24px;">
+            <div class="msgContent">
+                {{ message.context }}
+            </div>
+            <button type="button" class="reference"><span class="material-symbols-outlined">undo</span></button>
+        </div>
+        {% endif %}
+    {% endfor %}
+</div>
+
+<div id="form-container">
+    <form id='chat' method="POST" action="" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div id="inputField">
+            {{fileForm.uploaded_file}}
+            {{ messageForm.context }}
+            <button type="submit" id="chatSubmit" type="submit"><span class="material-symbols-outlined">send</span></button>
+        </div>
+    </form>
+</div>
+
+
+<script>
+    function clearInput(e){
+        document.getElementById('file-container').remove()
+        document.getElementById('id_uploaded_file').value = "";
+        document.querySelector("input[name='uploaded_file']").style.display = "flex"
+    }
+
+    document.querySelector('#inputField textarea').addEventListener('input', function (){
+        this.style.height = "auto";
+        this.style.height = (this.scrollHeight) + "px";
+    })
+
+    document.querySelector('input[name="uploaded_file"]').addEventListener('change', function() {
+        this.blur();
+        const file = this.files[0]
+
+        if(!file) return
+
+        const divEle = document.createElement('div')
+        divEle.id="file-container"
+
+        const img = document.createElement('img')
+        img.src = "{% static 'images/document-txt-svgrepo-com.svg' %}"
+        img.style.width = "5vw";
+        img.style.height = "10vh";
+
+        const fileName = document.createElement('div')
+        fileName.innerHTML = (file.name.length > 10)? (file.name.substring(0, 10) + '...'): file.name 
+
+        divEle.appendChild(img)
+        divEle.insertAdjacentHTML('beforeend', '<button type="button" id="clearFile" onclick="clearInput(event)">X</button>')
+        divEle.appendChild(fileName)
+        document.getElementById('chat').insertAdjacentElement('afterbegin', divEle)
+        document.getElementById('id_context').focus();
+    })
+
+    document.querySelector('textarea').addEventListener('keydown', function(e){
+        if(e.keyCode === 13 && !e.shiftKey){
+            e.preventDefault();
+            document.getElementById('chat').dispatchEvent(new Event('submit'));
+        }
+    })
+    
+    const chatForm = document.getElementById('chat');
+
+    function submitToAI(formData){
+
+        if (!document.querySelector(".loader")) {
+            document.querySelector("#chat-messages").insertAdjacentHTML('beforeend', '<div class="loader"></div>');
+        }
+
+        fetch(window.location.href, {
+            method: "POST",
+            body: formData,
+            headers: {
+                "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.querySelector(".loader").remove()
+            if(data.status === 'success'){
+                let msgList = document.querySelector("#chat-messages"); 
+                const cleanedMsg = marked.parse(data.ai_message)
+                
+                msgList.insertAdjacentHTML('beforeend', 
+                    `<div class="modelMessage">
+                        <div class="msgContent"}">
+                            ${cleanedMsg}
+                        </div>
+                        <button type="button" class="reference"><span class="material-symbols-outlined">undo</span></button>
+                    </div>
+                    <button id="regen" type="button">regenerate</button>`
+                );
+            };
+
+            if(data.status === 'error'){
+                alert("Upload Error" + data.message)
+                chatForm.reset();
+            }
+        })
+    }
+
+    
+
+    chatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        let formData = new FormData(e.target);
+        let msgList = document.querySelector("#chat-messages");
+
+        msgList.insertAdjacentHTML('beforeend', 
+            `<div class="userMessage" data-raw="${formData.get('context')}">
+            <div class="msgContent">
+                 ${formData.get('context')}
+            </div>
+            <button type="button" class="reference"><span class="material-symbols-outlined">undo</span></button>
+             </div>
+             <div class="loader"></div>`
+        );
+        chatForm.reset();
+        document.getElementById('reference-container')?.remove()
+
+        submitToAI(formData)
+    })
+
+    document.getElementById('chat-messages').addEventListener('click', function(e){
+        
+        if(e.target && e.target.id == 'regen'){
+            let modelMsg = e.target.previousElementSibling;
+            let userMsg = modelMsg.previousElementSibling;
+            const question = userMsg.getAttribute('data-raw')
+
+            modelMsg.remove()
+            e.target.remove()
+
+            let retryData = new FormData();
+            retryData.append('context', question)
+            retryData.append('regenerate', 'true')
+
+            submitToAI(retryData)
+        }
+    })
+
+    document.getElementById('chat-messages').addEventListener('click', (e) => {
+        const btn = e.target.closest('.reference')
+        if(btn){
+
+            const value = btn.previousElementSibling.textContent.trim();
+            let displayValue = value
+            if(value.length > 50 ){
+                displayValue = displayValue.substring(0, 50)
+                displayValue += '...'
+            }
+            
+            document.getElementById('reference-container')?.remove()
+
+            document.getElementById('form-container').insertAdjacentHTML('afterbegin', `
+            <div id="reference-container">
+                <input name="reference" type="hidden" value="${value}"></input>
+                <div>${displayValue}</div>
+                <button type="button" id="reference-button">X</button>
+            </div>
+            `);
+        
+        }
+    })
+
+    document.getElementById('form-container').addEventListener('click', (e) => {
+        if(e.target.tagName === "BUTTON" && e.target.id == 'reference-button'){
+            e.target.parentElement.remove()
+        }
+    })
+
+    function messageCleaner(message){
+        const messages = document.querySelectorAll(".modelMessage")
+        messages.forEach(msg =>{
+            rawMarkedDown = msg.getAttribute('data-raw')
+            msg.querySelector('.msgContent').innerHTML = marked.parse(rawMarkedDown)
+        });
+    }
+
+    messageCleaner();
+</script>
+
+{% endblock %}
