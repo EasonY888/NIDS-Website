@@ -6,4 +6,5 @@ urlpatterns = [
     path('register/', views.Register, name="register"),
     path('login/', views.LoginUser, name="login"),
     path('logout/', views.LogoutUser, name="logout"),
+    path('cancel-last-message/', views.cancelRequest, name='cancel-last-message'),
 ]

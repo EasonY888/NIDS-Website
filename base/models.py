@@ -20,6 +20,7 @@ class ChatSession(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
     summary = models.TextField(blank=True, default="No summary yet....")
     generated = models.DateField(auto_now=True)
+    is_cancelled = models.BooleanField(default=False)
 
     def __str__(self):
         return self.summary

@@ -25,16 +25,19 @@ body{
     align-items:center;
 }
 
-.title-container h1{
+.title-container > div{
     margin-left: 2.5vw;
+    display: inline-block;
+}
+
+.title-container > div h1{
     font-size: 52px;
     color: #2222E0;
     background-image: conic-gradient(from 45deg, #2222E0 0%, #CF2D2D 50%, #815BE3 100%);
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    display: inline-block;
-    }
+}
 
 .btn_logout{
     width: 5vw;

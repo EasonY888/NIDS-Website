@@ -144,32 +144,60 @@ def process_summary(chatSession, referenceMessage, regenerateChoice):
             ChatMessage.objects.filter(id__in = last_two_messages).delete()
 
         content += "\n I was not satisfied with the last answer you gave. Give me a new response"
-    
-    print(messagesCombined)
-    print(content)
+
 
     response = client.models.generate_content(
         model="gemini-3.1-flash-lite-preview", 
         contents = content
     )
 
+    currentSession.refresh_from_db()
+
     messageForm = MessageForm()
     saveMessage = messageForm.save(commit = False)
     saveMessage.session = currentSession
     saveMessage.role = 'Model'
     saveMessage.context = response.text
+    if currentSession.is_cancelled == True:
+        currentSession.is_cancelled = False
+        currentSession.save()
+        return ""
+    
     saveMessage.save()
 
     count = ChatMessage.objects.count()
 
     if count > 0 and count % 10 == 0:
         currentSummary = chatSession.summary
-        currentSession.summary = client.models.generate_content(
+        summaryResp = client.models.generate_content(
             model="gemini-3.1-flash-lite-preview", contents=(currentSummary + messagesCombined + "\n give me a summary for the above messages, don't make it too long")
         )
+        currentSession.summary = summaryResp.text
         currentSession.save()
     
     return saveMessage.context
+
+def cancelRequest(request):
+    if request.method == 'POST':
+        try:
+            chatSession = ChatSession.objects.get(user = request.user)
+            lastMessages = chatSession.chatmessage_set.order_by('-id')[:2]
+            if lastMessages.exists():
+                if lastMessages[0].role == 'Model':
+                    lastMessages.delete()
+                else:
+                    lastMessages[0].delete()
+                    chatSession.is_cancelled = True
+                    chatSession.save()
+                return JsonResponse({'status': 'success'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        
+    return JsonResponse({'status': 'Invalid method'}, status=400)
+
+
+
+
 
 
 
