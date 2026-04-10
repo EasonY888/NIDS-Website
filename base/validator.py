@@ -1,17 +1,25 @@
 import puremagic
 from django.core.exceptions import ValidationError
+import os
 
-def validate_pdf_only(file):
+def validate_csv_only(file):
+    ext = os.path.splitext(file.name)[1]
 
-    file_head = file.read(2048)
-
-    file.seek(0)
+    if ext.lower() != '.csv':
+        raise ValidationError("File extension must be .csv")
+    
+    REQUIRED_HEADERS = (
+        "IPV4_SRC_ADDR,L4_SRC_PORT,IPV4_DST_ADDR,L4_DST_PORT,"
+        "PROTOCOL,L7_PROTO,IN_BYTES,OUT_BYTES,IN_PKTS,"
+        "OUT_PKTS,TCP_FLAGS,FLOW_DURATION_MILLISECONDS"
+    )
 
     try:
-        
-        matches = puremagic.from_string(file_head)
+        file.seek(0)
+        first_line = file.readline().decode('utf-8').strip()
+        file.seek(0)
 
-        if ".csv" not in matches:
+        if first_line.upper() != REQUIRED_HEADERS.upper():
             raise ValidationError("Incorrect file uploaded! Only csv files allowed")
         
     except puremagic.PureError:

@@ -68,7 +68,7 @@ class Migration(migrations.Migration):
             name='UploadedFiles',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('uploaded_file', models.FileField(blank=True, upload_to='files/', validators=[base.validator.validate_pdf_only])),
+                ('uploaded_file', models.FileField(blank=True, upload_to='files/', validators=[base.validator.validate_csv_only])),
                 ('uploaded_at', models.DateTimeField(auto_now_add=True)),
                 ('associatedCont', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='base.chatmessage')),
             ],

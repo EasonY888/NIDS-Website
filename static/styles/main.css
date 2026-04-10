@@ -27,7 +27,6 @@ body{
 
 .title-container > div{
     margin-left: 2.5vw;
-    display: inline-block;
 }
 
 .title-container > div h1{
@@ -37,6 +36,12 @@ body{
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+}
+
+.title-container > div h4{
+    margin-top: 0;
+    font-size: 28px;
+    color: white;
 }
 
 .btn_logout{

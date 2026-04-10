@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.validators import FileExtensionValidator
-from .validator import validate_pdf_only
+from .validator import validate_csv_only
 from django.contrib.auth.models import AbstractUser
 
 # Create your models here.
@@ -46,7 +46,7 @@ class UploadedFiles(models.Model):
     uploaded_file = models.FileField(
         upload_to='files/', 
         blank=True,
-        validators=[validate_pdf_only])
+        validators=[validate_csv_only])
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
 

@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from dotenv import load_dotenv
+from base.utils.predictML import analyzeContent
 
 # Create your views here.
 def Register(request):
@@ -62,6 +63,7 @@ def Home(request):
         fileForm = FileForm(request.POST, request.FILES)
         referenceMessage = request.POST.get('reference') or None
         regenerateChoice = True if (request.POST.get('regenerate') == 'true') else False
+        saveFile = ""
 
         messageForm = MessageForm(request.POST)
         if messageForm.is_valid():
@@ -85,8 +87,9 @@ def Home(request):
                         'status': 'error',
                         'message': str(error_message)
                     })
-                      
-            generatedMessage = process_summary(chatSession, referenceMessage, regenerateChoice)
+            generate = False if (fileForm.data.get('context') == '') else True
+            generatedMessage = process_summary(generate, chatSession, referenceMessage, regenerateChoice, saveFile)
+            
             return JsonResponse({
                     'status': 'success',
                     'user_message': saveMessage.context,
@@ -101,55 +104,64 @@ def Home(request):
     return render(request, 'base/home.html', context)
 
 def process_to_NLP(file):
+    result = analyzeContent(file)
     file_path = file.uploaded_file.path
     if os.path.exists(file_path):
         os.remove(file_path)
     
-    parentMessage = file.associatedCont
-    if len(parentMessage.context) == 0:
-        parentMessage.delete()
-
     file.delete()
 
-def process_summary(chatSession, referenceMessage, regenerateChoice):
-    
+    return result
+
+def process_summary(textGenerate, chatSession, referenceMessage, regenerateChoice, file):
     currentSession = chatSession
-
-    client = genai.Client( api_key=os.getenv("GEMINI_API_KEY"))
-
-    
-    nearestNum = (ChatMessage.objects.filter(session=currentSession).count() // 10) * 10 
-    messages = ChatMessage.objects.filter(session = currentSession).order_by('id')[nearestNum:]
-    messagesCombined = " ".join([message.context for message in messages])
-
-    summary = currentSession.summary
-    summary += messagesCombined
-    
     content = ""
+    NLP_result = ""
 
-    if referenceMessage == None:
-        content = ("I'm providing you with a list of the previous questions asked" +
-        "and the responses you generated, there can be only one message which in " +
-        "case it is the question, Just give me the answer for the last question\n" + summary)
-    else:
-        content = ("I'm providing you with a list of the previous questions asked" + 
-        "and the responses you generated\n this is the specific message that I'm referencing: " + 
-        referenceMessage + " give me the answer for the last question " + summary)
-    
-    if regenerateChoice:
-        last_two_messages = ChatMessage.objects.filter(
-            session = currentSession
-        ).order_by('-id')[:2].values_list('id', flat=True)
-        if last_two_messages:
-            ChatMessage.objects.filter(id__in = last_two_messages).delete()
+    if file != '':
+        NLP_result = process_to_NLP(file)
 
-        content += "\n I was not satisfied with the last answer you gave. Give me a new response"
+    if textGenerate:
+        client = genai.Client( api_key=os.getenv("GEMINI_API_KEY"))
 
+        
+        nearestNum = (ChatMessage.objects.filter(session=currentSession).count() // 10) * 10 
+        messages = ChatMessage.objects.filter(session = currentSession).order_by('id')[nearestNum:]
+        messagesCombined = " ".join([message.context for message in messages])
 
-    response = client.models.generate_content(
-        model="gemini-3.1-flash-lite-preview", 
-        contents = content
-    )
+        summary = currentSession.summary
+        summary += messagesCombined
+
+        if NLP_result != '':
+            content += NLP_result
+            content += "above is the analysis result of a network log, answer the last question referencing the result"
+
+        if referenceMessage == None:
+            content += ("I am providing you with a set of the previous questions asked" +
+            "and the responses you generated, there can be only one message which in " +
+            "case it is the question, Just give me the answer for the last question\n" + summary)
+        
+        else:
+            content += ("I provided you with a list of the previous questions asked" + 
+            "and the responses you generated\n this is the specific message that I'm referencing: " + 
+            referenceMessage + " give me the answer for the last question " + summary)
+        
+        if regenerateChoice:
+            last_two_messages = ChatMessage.objects.filter(
+                session = currentSession
+            ).order_by('-id')[:2].values_list('id', flat=True)
+            if last_two_messages:
+                ChatMessage.objects.filter(id__in = last_two_messages).delete()
+
+            content += "\n I was not satisfied with the last answer you gave. Give me a new response"
+
+        
+
+        response = client.models.generate_content(
+            model="gemini-3.1-flash-lite-preview", 
+            contents = content
+        )
+        content = response.text
 
     currentSession.refresh_from_db()
 
@@ -157,7 +169,7 @@ def process_summary(chatSession, referenceMessage, regenerateChoice):
     saveMessage = messageForm.save(commit = False)
     saveMessage.session = currentSession
     saveMessage.role = 'Model'
-    saveMessage.context = response.text
+    saveMessage.context = content if textGenerate else NLP_result
     if currentSession.is_cancelled == True:
         currentSession.is_cancelled = False
         currentSession.save()
