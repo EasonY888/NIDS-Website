@@ -36,7 +36,9 @@
         {% csrf_token %}
         <div id="inputField">
             {% if user.role == "A" %}
-            {{fileForm.uploaded_file}}
+            <div style="position: relative;">
+                {{fileForm.uploaded_file}}
+            </div>
             {% endif %}
             {{ messageForm.context }}
             <button type="submit" id="chatSubmit" type="submit"><span class="material-symbols-outlined">send</span></button>
@@ -82,8 +84,28 @@
             document.getElementById('chat').insertAdjacentElement('afterbegin', divEle)
             document.getElementById('id_context').focus();
         })
-    }
+
+        fileInput.addEventListener('mouseover', (event) => {
+            const reminder = document.createElement('div')
+            reminder.appendChild(document.createTextNode(
+                'Must contain the columns: IPV4_SRC_ADDR, L4_SRC_PORT, IPV4_DST_ADDR, ' + 
+                'L4_DST_PORT, PROTOCOL, L7_PROTO, IN_BYTES, OUT_BYTES, ' +
+                'IN_PKTS, OUT_PKTS, TCP_FLAGS, FLOW_DURATION_MILLISECONDS'
+            ))
+            reminder.id = 'reminder'
+
+            document.body.appendChild(reminder)
+            const rect = event.target.getBoundingClientRect();
+
+            reminder.style.left = `${rect.left}px`
+            reminder.style.top = `${rect.top - reminder.offsetHeight - 10}px`
+        })
+
+        fileInput.addEventListener('mouseout', () => {
+            document.getElementById('reminder')?.remove();
+         })
     
+    }
 
     document.querySelector('textarea').addEventListener('keydown', function(e){
         if(e.keyCode === 13 && !e.shiftKey){

@@ -249,6 +249,16 @@ body{
     display:none;
 }
 
+#reminder{
+    width: 300px;
+    position: absolute;
+    pointer-events: none;
+    border: solid black 2px;
+    color: white;
+    border-radius: 25px;
+    padding: 7px;
+}
+
 #chatSubmit{
     width: 7%;
     height:45px;
