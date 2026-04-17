@@ -12,20 +12,27 @@
 </div>
 
 <div id="chat-messages">
+    <div id="chat-header">
+        <div id="chat-header-avatar">AI</div>
+        <div id="chat-header-info">
+            <span id="chat-header-name">NID-Vise</span>
+            <span id="chat-header-status">Online</span>
+        </div>
+    </div>
     {% for message in messages %}
         {% if message.role == 'Model' %}
         <div class="modelMessage" data-raw="{{ message.context }}">
             <div class="msgContent">
                  {{ message.context }}
             </div>
-            <button type="button" class="reference"><span class="material-symbols-outlined">undo</span></button>
+            <button type="button" class="reference ai"><span class="material-symbols-outlined">undo</span></button>
         </div>
         {% else %}
         <div class="userMessage" style="font-size: 24px;">
             <div class="msgContent">
                 {{ message.context }}
             </div>
-            <button type="button" class="reference"><span class="material-symbols-outlined">undo</span></button>
+            <button type="button" class="reference user"><span class="material-symbols-outlined">undo</span></button>
         </div>
         {% endif %}
     {% endfor %}

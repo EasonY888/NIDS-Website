@@ -144,7 +144,7 @@ def process_summary(textGenerate, chatSession, referenceMessage, regenerateChoic
         else:
             content += ("I provided you with a list of the previous questions asked" + 
             "and the responses you generated\n this is the specific message that I'm referencing: " + 
-            referenceMessage + " give me the answer for the last question " + summary)
+            referenceMessage + " give me the answer for the reference question " + summary)
         
         if regenerateChoice:
             last_two_messages = ChatMessage.objects.filter(
